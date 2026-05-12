@@ -561,17 +561,34 @@ function installSenpiTradingRuntimeSkillIfNeeded() {
   if (!exists(cfgPath)) return;
 
   const sentinelPath = path.join(STATE_DIR, "config", `${SENPI_TRADING_RUNTIME_SKILL_NAME}-skill.installed`);
+  const tmpDir = path.join(STATE_DIR, "tmp", `${SENPI_TRADING_RUNTIME_SKILL_NAME}-clone`);
+  const skillDestDir = path.join(STATE_SKILLS_DIR, SENPI_TRADING_RUNTIME_SKILL_NAME);
+
+  // Sentinel encodes the branch that was installed, so changing SENPI_SKILLS_BRANCH
+  // between deploys triggers a reinstall instead of silently keeping the old branch.
+  // Legacy sentinels (just an ISO timestamp) match no branch → also trigger reinstall.
   if (exists(sentinelPath)) {
-    console.log(`[bootstrap] ${SENPI_TRADING_RUNTIME_SKILL_NAME} skill already installed, skipping`);
-    return;
+    let installedBranch = "";
+    try {
+      const match = fs.readFileSync(sentinelPath, "utf8").match(/^branch:(.+)$/m);
+      installedBranch = match ? match[1].trim() : "";
+    } catch { /* fall through: reinstall */ }
+
+    if (installedBranch === SENPI_SKILLS_BRANCH) {
+      console.log(`[bootstrap] ${SENPI_TRADING_RUNTIME_SKILL_NAME} skill already installed (branch: ${SENPI_SKILLS_BRANCH}), skipping`);
+      return;
+    }
+    console.log(
+      `[bootstrap] ${SENPI_TRADING_RUNTIME_SKILL_NAME} skill branch changed (was: ${installedBranch || "unknown"}, now: ${SENPI_SKILLS_BRANCH}) — reinstalling`
+    );
+    // Wipe the old skill dir so files removed in the new branch don't linger (cpSync merges, doesn't replace).
+    if (exists(skillDestDir)) fs.rmSync(skillDestDir, { recursive: true, force: true });
   }
 
   // Clone the skill directory directly from the repo rather than using the `skills` CLI.
   // The `skills` CLI mis-parses branch names containing "/" (e.g. "SAITA/dsl") and leaks
   // the branch suffix into the skill-name filter, causing "No matching skills found".
   // Cloning the full repo at the target branch and copying the skill subdir is reliable.
-  const tmpDir = path.join(STATE_DIR, "tmp", `${SENPI_TRADING_RUNTIME_SKILL_NAME}-clone`);
-  const skillDestDir = path.join(STATE_SKILLS_DIR, SENPI_TRADING_RUNTIME_SKILL_NAME);
 
   // Clean up any previous failed clone attempt.
   if (exists(tmpDir)) fs.rmSync(tmpDir, { recursive: true, force: true });
@@ -603,9 +620,10 @@ function installSenpiTradingRuntimeSkillIfNeeded() {
   fs.cpSync(skillSrcDir, skillDestDir, { recursive: true });
   fs.rmSync(tmpDir, { recursive: true, force: true });
 
-  // Write sentinel so future boots skip the install.
+  // Write sentinel so future boots skip the install. Branch is embedded so a different
+  // SENPI_SKILLS_BRANCH on the next boot triggers a reinstall (see check above).
   ensureDir(path.dirname(sentinelPath));
-  fs.writeFileSync(sentinelPath, new Date().toISOString());
+  fs.writeFileSync(sentinelPath, `branch:${SENPI_SKILLS_BRANCH}\ninstalledAt:${new Date().toISOString()}\n`);
   console.log(`[bootstrap] ${SENPI_TRADING_RUNTIME_SKILL_NAME} skill installed (branch: ${SENPI_SKILLS_BRANCH})`);
 }
 
