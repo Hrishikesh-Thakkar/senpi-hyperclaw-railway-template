@@ -519,8 +519,7 @@ console.log(`[auto-onboard] directory created`);
           ...(mergedAllowFrom.length > 0 ? { allowFrom: mergedAllowFrom } : {}),
           botToken: TELEGRAM_BOT_TOKEN,
           groupPolicy: "allowlist",
-          streamMode: "block",
-          blockStreaming: true,
+          streaming: { mode: "block", block: { enabled: true } },
         };
         console.log(`[auto-onboard] Telegram dmPolicy: ${cfgObj.dmPolicy}${resolvedId ? ` (ID: ${resolvedId})` : " (no cached ID, using pairing fallback)"}`);
 

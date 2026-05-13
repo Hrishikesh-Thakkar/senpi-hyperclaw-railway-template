@@ -20,12 +20,12 @@ RUN corepack enable
 WORKDIR /openclaw
 
 # OpenClaw version control:
-# - Set OPENCLAW_VERSION build-arg to pin a specific tag/branch (e.g., v2026.2.26)
-# - If not set, falls back to v2026.2.22
+# - Set OPENCLAW_VERSION build-arg to pin a specific tag/branch (e.g., v2026.5.7)
+# - If not set, falls back to v2026.5.7 (latest stable as of 2026-05-13)
 ARG OPENCLAW_VERSION
 RUN set -eux; \
-  REF="${OPENCLAW_VERSION:-v2026.2.22}"; \
-  echo "✓ Using OpenClaw ref: ${REF}"; \
+  REF="${OPENCLAW_VERSION:-v2026.5.7}"; \
+  echo "Using OpenClaw ref: ${REF}"; \
   git clone --depth 1 --branch "${REF}" https://github.com/openclaw/openclaw.git .
 
 # Patch: relax version requirements for packages that may reference unpublished versions.

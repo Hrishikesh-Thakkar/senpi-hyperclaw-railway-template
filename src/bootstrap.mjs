@@ -204,8 +204,7 @@ function patchOpenClawJson() {
         console.log(`[bootstrap] numericId: ${numericId}`);
         const base = {
           enabled: true,
-          streamMode: "block",
-          blockStreaming: true,
+          streaming: { mode: "block", block: { enabled: true } },
         };
         if (numericId) {
           const existingAllowFrom = cfg.channels?.telegram?.allowFrom;
@@ -460,9 +459,13 @@ function installSenpiRuntimePluginIfNeeded() {
     // the wrapper boot in environments that already have it enabled.
   }
 
-  // openclaw derives the install directory from the plugin ID (unscoped npm name),
-  // NOT the full scoped package path.  @senpi-ai/runtime → extensions/runtime.
-  const pluginDir = path.join(STATE_DIR, "extensions", SENPI_RUNTIME_PLUGIN_ID);
+  // Probe both install paths used by different OpenClaw versions:
+  //   - 2026.5.x (managed npm):  STATE_DIR/npm/node_modules/@senpi-ai/runtime
+  //   - 2026.2.x (legacy extensions): STATE_DIR/extensions/runtime
+  // The first one that exists tells us the plugin is already installed.
+  const managedPluginDir = path.join(STATE_DIR, "npm", "node_modules", SENPI_RUNTIME_NPM_SPEC);
+  const legacyPluginDir = path.join(STATE_DIR, "extensions", SENPI_RUNTIME_PLUGIN_ID);
+  const pluginDir = exists(managedPluginDir) ? managedPluginDir : legacyPluginDir;
 
   // Backfill: if the plugin directory exists but the install record is missing,
   // `openclaw plugins update runtime` fails with "No install record for runtime"
@@ -495,9 +498,13 @@ function installSenpiRuntimePluginIfNeeded() {
   }
 
   ensureDir(path.join(STATE_DIR, "extensions"));
+  // OpenClaw 2026.5.x added a static-analysis install gate that flags any
+  // child_process use. The Senpi runtime legitimately spawns processes for
+  // the auto-updater and its CLI surface; pass --dangerously-force-unsafe-install
+  // so the trusted, first-party plugin installs through.
   const result = spawnSync(
     "openclaw",
-    ["plugins", "install", SENPI_RUNTIME_NPM_SPEC],
+    ["plugins", "install", "--dangerously-force-unsafe-install", SENPI_RUNTIME_NPM_SPEC],
     {
       env: { ...process.env, OPENCLAW_STATE_DIR: STATE_DIR },
       stdio: "pipe",

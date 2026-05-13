@@ -362,7 +362,7 @@ export function createSetupRouter() {
               ...(mergedAllowFrom.length > 0 ? { allowFrom: mergedAllowFrom } : {}),
               botToken: token,
               groupPolicy: "allowlist",
-              streamMode: "block",
+              streaming: { mode: "block", block: { enabled: true } },
             };
             const set = await runCmd(
               OPENCLAW_NODE,
