@@ -36,6 +36,7 @@ import {
   catchAllMiddleware,
   attachUpgrade,
 } from "./routes/proxy.js";
+import { createSessionsRouter } from "./routes/sessions.js";
 
 if (!SETUP_PASSWORD) {
   console.error("================================================================");
@@ -55,6 +56,9 @@ app.use(express.json({ limit: "1mb" }));
 
 // Setup wizard and API
 app.use("/setup", createSetupRouter());
+
+// Internal sessions API (loopback to gateway, no device auth needed)
+app.use("/internal/sessions", createSessionsRouter());
 
 // Control UI (/, /openclaw) — intercept HTML and inject token script
 app.get(
