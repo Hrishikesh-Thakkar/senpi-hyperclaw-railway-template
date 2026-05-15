@@ -36,9 +36,16 @@ RUN set -eux; \
     sed -i -E 's/"openclaw"[[:space:]]*:[[:space:]]*"workspace:[^"]+"/"openclaw": "*"/g' "$f"; \
   done
 
-# Disable pnpm's minimumReleaseAge — setting may live in package.json (pnpm v10+);
-# .npmrc override takes precedence regardless.
-RUN echo 'minimum-release-age=0' >> .npmrc
+# Disable pnpm's minimumReleaseAge — nuke from both package.json and .npmrc.
+RUN node -e "\
+  const fs = require('fs');\
+  const pkg = JSON.parse(fs.readFileSync('package.json','utf8'));\
+  if (pkg.pnpm) {\
+    delete pkg.pnpm.minimumReleaseAge;\
+    if (pkg.pnpm.settings) delete pkg.pnpm.settings.minimumReleaseAge;\
+  }\
+  fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');\
+" && echo 'minimum-release-age=0' >> .npmrc
 RUN pnpm install --no-frozen-lockfile
 RUN pnpm build
 ENV OPENCLAW_PREFER_PNPM=1
