@@ -36,9 +36,9 @@ RUN set -eux; \
     sed -i -E 's/"openclaw"[[:space:]]*:[[:space:]]*"workspace:[^"]+"/"openclaw": "*"/g' "$f"; \
   done
 
-# Relax pnpm's minimumReleaseAge so freshly-published internal packages
+# Disable pnpm's minimumReleaseAge so freshly-published internal packages
 # (e.g. @openclaw/fs-safe) don't block the install.
-RUN sed -i '/^minimum-release-age/d; /^minimumReleaseAge/d' .npmrc 2>/dev/null || true
+RUN find . -name '.npmrc' -exec sh -c 'echo "minimum-release-age=0" >> "$1"' _ {} \;
 RUN pnpm install --no-frozen-lockfile
 RUN pnpm build
 ENV OPENCLAW_PREFER_PNPM=1
