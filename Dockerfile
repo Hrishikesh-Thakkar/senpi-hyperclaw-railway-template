@@ -38,10 +38,7 @@ RUN set -eux; \
 
 # Relax pnpm's minimumReleaseAge so freshly-published internal packages
 # (e.g. @openclaw/fs-safe) don't block the install.
-RUN if [ -f .npmrc ]; then \
-      grep -q 'minimumReleaseAge' .npmrc && \
-        sed -i '/^minimum-release-age/d; /^minimumReleaseAge/d' .npmrc; \
-    fi
+RUN sed -i '/^minimum-release-age/d; /^minimumReleaseAge/d' .npmrc 2>/dev/null || true
 RUN pnpm install --no-frozen-lockfile
 RUN pnpm build
 ENV OPENCLAW_PREFER_PNPM=1
